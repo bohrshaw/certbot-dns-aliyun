@@ -48,7 +48,7 @@ func addDomainRecord(client *alidns.Client, domainName string, value string) {
 	if err != nil {
 		fmt.Print(err.Error())
 	}
-	fmt.Printf("[%s] Response from 'addDomainRecord()' is %#v\n", time.Now().Format("2006-01-02 15:04:05"), response)
+	fmt.Printf("[%s] Response from 'addDomainRecord()' is %v\n", time.Now().Format("2006-01-02 15:04:05"), response)
 }
 
 // 列出所有记录类型为 TXT，且记录名包含 '_acme-challenge' 的所有记录，返回 recordID 组成的切片，后续删除它们
@@ -63,7 +63,7 @@ func listDomainRecords(client *alidns.Client, domainName string) []string {
 	if err != nil {
 		fmt.Print(err.Error())
 	}
-	fmt.Printf("[%s] Response from 'listDomainRecords()' is %#v\n", time.Now().Format("2006-01-02 15:04:05"), response)
+	fmt.Printf("[%s] Response from 'listDomainRecords()' is %v\n", time.Now().Format("2006-01-02 15:04:05"), response)
 
 	var recordIds []string
 	for _, r := range response.DomainRecords.Record {
@@ -83,7 +83,7 @@ func deleteDomainRecord(client *alidns.Client, recordID string) {
 	if err != nil {
 		fmt.Print(err.Error())
 	}
-	fmt.Printf("[%s] Response from 'deleteDomainRecord()' is %#v\n", time.Now().Format("2006-01-02 15:04:05"), response)
+	fmt.Printf("[%s] Response from 'deleteDomainRecord()' is %v\n", time.Now().Format("2006-01-02 15:04:05"), response)
 }
 
 func main() {
@@ -121,10 +121,17 @@ func main() {
 		}
 
 		addDomainRecord(client, domainName, value)
+
+		// Sleep to make sure the change has time to propagate over to DNS
+		/* 否则报错:
+		   Attempting to renew cert (madmalls.com) from /etc/letsencrypt/renewal/madmalls.com.conf produced an unexpected error: Failed authorization procedure. madmalls.com (dns-01): urn:ietf:params:acme:error:dns :: DNS problem: NXDOMAIN looking up TXT for _acme-challenge.madmalls.com - check that a DNS record exists for this domain. Skipping.All renewal attempts failed. The following certs could not be renewed:
+		   /etc/letsencrypt/live/madmalls.com/fullchain.pem (failure)
+		*/
+		time.Sleep(30 * time.Second)
 	case "cleanup":
 		// 先获取所有记录类型为 TXT，且记录名包含 '_acme-challenge' 的记录 ID
 		recordIds := listDomainRecords(client, os.Getenv("CERTBOT_DOMAIN"))
-		fmt.Printf("[%s] All record Ids that need to delete is: %#v\n", time.Now().Format("2006-01-02 15:04:05"), recordIds)
+		fmt.Printf("[%s] All record Ids that need to delete is: %v\n", time.Now().Format("2006-01-02 15:04:05"), recordIds)
 
 		// 循环，删除它们
 		for _, id := range recordIds {
